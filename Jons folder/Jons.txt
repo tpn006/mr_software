@@ -1,4 +1,0 @@
-100g of flour
-git add 'Jons folder'
-git commit -a -m "added the file in txt"
-git push
