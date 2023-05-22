@@ -3,6 +3,7 @@
 import argparse
 #from . import myutils as myutils
 #from mrsoftware import __version__
+#from . import KnownMotif
 import os
 from pyfaidx import Fasta
 import sys
@@ -32,7 +33,7 @@ class bcolors:
 def ERROR(msg):
 	"""
 	Print an error message and die
-
+ 
 	Parameters
 	----------
 	msg : str
@@ -73,15 +74,47 @@ def main():
         outf = sys.stdout
     else: outf = open(args.out, "w")
 
-    # Load  genome FASTA
+    #Check file integrity
+    # genome
     if args.genome is not None:
         if not os.path.exists(args.genome):
-            ERROR("{fasta} does not exist".format(fasta=args.genome))
-        genome = Fasta(args.genome)
+            ERROR("{genome} does not exist".format(genome=args.genome))
+        genome_path = args.genome
     else:
+        ERROR("Path to Genome not provided :(")
         print(":(")
-        genome = None
+        return # Just quit and give up
+    # meme 
+    if args.meme is not None:
+        if not os.path.exists(args.meme):
+            ERROR("{meme} does not exist".format(meme=args.meme) )
+        meme_path = args.meme
+    else:
+        ERROR("Path to meme file not provided :(")
+        return # Just quit and give up
+    # bed
+    if args.bed is not None:
+        if not os.path.exists(args.bed):
+            ERROR("{bed} does not exist".format(meme=args.bed) )
+        bed_path = args.bed
+    else:
+        ERROR("Path to bed file not provided :(")
+        return # Just quit and give up
+    
+    peaks = getPeaksFromBed(bed_path)
+    peak_seq_list = getSeqFromPeakList(peaks)
+    background_freqs = GetBackgroundFreqs(meme_path)
+    pwm = GetPWM(peak_seq_list,background_freqs)
 
+
+def getSeqFromPeakList(peaks):
+    peaks_seq_list = []
+    for peak in peaks:
+        peaks_seq_list.append(getSeqFromPeak(peak))
+    return peaks_seq_list
+
+def getSeqFromPeak(peak):
+    getSeqFromGenome(peak[0],peak[1],peak[2])
 
 def GetPFM(sequences):
     """ Compute the PFM for a set of sequences
@@ -98,9 +131,7 @@ def GetPFM(sequences):
     Assumes all sequences have the same length
     """
     pfm = np.zeros((4, len(sequences[0])))
-    # Fill in pfm below. Note: pfm[i,j] can be used to 
-    # access and set the value for position j at nucleotide i
-    # your code here
+    # pfm[i,j]: value for position j at nucleotide i
     for seq in sequences:
         i = 0
         while i < len(seq):
@@ -116,6 +147,34 @@ def GetPFM(sequences):
             
     return pfm
 
+def GetBackgroundFreqs(meme_path):
+    """ Get background freqs from meme file
+    
+    Parameters
+    ----------
+        meme_path = meme file that was inputed
+
+    Returns
+    -------
+        list of background freqs in order of A, C, G, T
+    """
+
+    background_freqs = []
+    file = open(meme_path)
+    prev_line = ''
+    back_seq_line = ''
+    for line in file.readlines():
+        if 'Background letter frequencies' in line: 
+            prev_line = line
+        elif prev_line != '':
+            back_seq_line = line
+            break
+    split_text = back_seq_line.split(" ")
+    background_freqs.append(float(split_text[1].strip()))
+    background_freqs.append(float(split_text[3].strip()))
+    background_freqs.append(float(split_text[5].strip()))
+    background_freqs.append(float(split_text[7].strip()))
+    return background_freqs
 
 def GetPWM(binding_sites, background_freqs=[0.25, 0.25, 0.25, 0.25]):
     """ Compute the PWM for a set of binding sites
@@ -139,7 +198,6 @@ def GetPWM(binding_sites, background_freqs=[0.25, 0.25, 0.25, 0.25]):
     # Compute pwm below
     # Note: np.sum(pfm[:,j]) will give the sum of counts for column j
     # Note: pfm[i,j]/np.sum(pfm[:,j]) gives p(i,j) (frequency of nucleotide i at position j)
-    # your code here
     j = 0
     while j < len(binding_sites[0]):
         i = 0
@@ -165,7 +223,6 @@ def ScoreSeq(pwm, sequence):
        PWM score of the sequence
     """
     score = 0
-    # your code here
     i = 0
     while i < len(sequence):
         if sequence[i] == 'A':
@@ -199,7 +256,6 @@ def GetThreshold(null_dist, pval):
        Threshold to achieve the desired p-value    
     """
     thresh = 0 # set this below to be the score threshold to obtain a p-value <0.01
-    # your code here
     num = len(null_dist) * pval
     temp_dist = null_dist.copy()
     i = 1
@@ -227,7 +283,6 @@ def ScanSequence(pwm, sequence):
     """
     n = pwm.shape[1]
     scores = [0]*(len(sequence)-n+1) # list of scores. scores[i] should give the score of the substring sequence[i:i+n]
-    # your code here
     i = 0
     while i < (len(sequence)-n+1):
         scores[i] = ScoreSeq(pwm, sequence[i:i+n])
@@ -249,7 +304,6 @@ def ReverseComplement(sequence):
       Reverse complement of sequence
     """
     revcomp = ""
-    # your code here
     i = len(sequence)-1
     while i >= 0:
         if sequence[i] == 'A':
@@ -278,7 +332,6 @@ def ComputeNucFreqs(sequences, background_freqs = [0.25,0.25,0.25,0.25]):
        Frequencies of A, C, G, T in the sequences
     """
     freqs = [0.25, 0.25, 0.25, 0.25] # compute frequency of A, C, G, T
-    # your code here
     total = 0
     A_count = 0
     C_count = 0
@@ -314,7 +367,8 @@ def getSeqFromGenome(chromosome, start, end):
     start: int (start of peak)
     end: int (end of peak)
 
-    Returns: string of nucleotides
+    Returns: 
+    string of nucleotides
     """
     #genes = Fasta(genome)
     return genome[chromosome][start:end]
@@ -369,8 +423,28 @@ def ComputeEnrichment(peak_total, peak_motif, bg_total, bg_motif):
     return pval
 
 
-main()
+def makeKnownMotifObjs(meme_path):
+    known_motifs_list = []
+    #KnownMotif(self, name, alength, w, pwm)
+    file = open(meme_path)
+    lines = file.readlines()
+    i = 0
+    while i < len(lines):
+        if 'MOTIF' in lines[i]:
+            pwm_index_start = 0
+            if lines[i+1] == '': # empty line in case motif doesnt start yet
+                pwm_index_start = i+3
+            else:
+                pwm_index_start = i+2
+            name = lines[i][5:] # name of the motif
+            alength = 4
+            w_str = 'w= '
+            w_index =  lines[pwm_index_start-1].index(w_str)
+            nsites_index = lines[pwm_index_start-1].index(' nsites')
+            w = lines[pwm_index_start-1][w_index + len(w_str) : nsites_index]
+            
+        i += 1
+    #return known_motifs_list
+    return 0
 
-print(getSeqFromGenome(17, 50427861, 50427936))
-
-getPeaksFromBed("../tests/Oct4.peaks.bed")    
+makeKnownMotifObjs("../tests/motifs.meme")
