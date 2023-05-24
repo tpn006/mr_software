@@ -1,9 +1,9 @@
-#!/usr/bin/ python3
+#!/usr/bin/python3
 
 import argparse
 #from . import myutils as myutils
 #from mrsoftware import __version__
-#from . import KnownMotif
+import KnownMotif as KnownMotif
 import os
 from pyfaidx import Fasta
 import sys
@@ -12,11 +12,10 @@ import math
 import pandas as pd
 import scipy
 import argparse
+import random
 
 
 genome = Fasta("../tests/GRCm38.fa")
-bed = None
-meme = None
 nucs = {"A": 0, "C": 1, "G": 2, "T": 3}
 
 class bcolors:
@@ -101,20 +100,64 @@ def main():
         ERROR("Path to bed file not provided :(")
         return # Just quit and give up
     
-    peaks = getPeaksFromBed(bed_path)
-    peak_seq_list = getSeqFromPeakList(peaks)
-    background_freqs = GetBackgroundFreqs(meme_path)
-    pwm = GetPWM(peak_seq_list,background_freqs)
+    #get the sequences of all the peaks
+    peak_seq_list = getSeqFromPeakList(bed_path)
 
+    # Get motifs
+    known_motifs = makeKnownMotifObjs(meme_path)
+
+    # Score motifs based on peaks
+    scoreAllSequencesForMotifs(peak_seq_list, known_motifs)
+
+    print(known_motifs[0].getScore())
+
+def scoreAllSequencesForMotifs(peak_seq_list, motif_array, which_score):
+    """
+    Given a list of sequences and motifs, score all motifs with the sequences
+
+    Parameters:
+    -----------
+        peak_seq_list : List of sequences from peaks
+        motif_array : array of all the motifs to be scored
+
+    Returns:
+    --------
+        Nothing
+    """
+    for peak in peak_seq_list:
+        scoreAllMotifsByPeak(peak, motif_array, which_score)
+
+def scoreAllMotifsByPeak(peak_seq, motif_array, which_score):
+    """
+    For a given sequence, score all motifs using that sequence. Updates all the motifs with new scores
+
+    Parameters:
+    -----------
+        peak_seq : Sequence of the peak to score motifs with
+        motif_array : array of all the known motif objects 
+
+    Returns:
+    --------
+        No Return
+    """
+    for motif in motif_array:
+        motif.scoreSequence(peak_seq, which_score)
 
 def getSeqFromPeakList(peaks):
+    """
+    peaks - 
+    returns the sequences of the peaks
+    """
     peaks_seq_list = []
     for peak in peaks:
         peaks_seq_list.append(getSeqFromPeak(peak))
     return peaks_seq_list
 
 def getSeqFromPeak(peak):
-    getSeqFromGenome(peak[0],peak[1],peak[2])
+    """
+    returns
+    """
+    return getSeqFromGenome(peak[0],peak[1],peak[2])
 
 def GetPFM(sequences):
     """ Compute the PFM for a set of sequences
@@ -236,7 +279,6 @@ def ScoreSeq(pwm, sequence):
         i = i+1
     return score
 
-
 def GetThreshold(null_dist, pval):
     """ Find the threshold to achieve a desired p-value
     
@@ -265,7 +307,6 @@ def GetThreshold(null_dist, pval):
     thresh = max(temp_dist)
     return thresh
 
-
 def ScanSequence(pwm, sequence):
     """ Scan a sequence using a PWM
     
@@ -288,7 +329,6 @@ def ScanSequence(pwm, sequence):
         scores[i] = ScoreSeq(pwm, sequence[i:i+n])
         i+=1
     return scores
-
 
 def ReverseComplement(sequence):
     """ Get the reverse complement of a sequence
@@ -317,9 +357,9 @@ def ReverseComplement(sequence):
         i = i-1
     return revcomp
 
-
 def ComputeNucFreqs(sequences, background_freqs = [0.25,0.25,0.25,0.25]):
-    """ Compute nucleotide frequencies of a list of sequences
+    """ 
+    Compute nucleotide frequencies of a list of sequences
     
     Parameters
     ----------
@@ -356,7 +396,6 @@ def ComputeNucFreqs(sequences, background_freqs = [0.25,0.25,0.25,0.25]):
     freqs[3] = T_count/total
     return freqs
 
-
 def getSeqFromGenome(chromosome, start, end):
     """
     Returns sequence of peak from genome
@@ -373,78 +412,208 @@ def getSeqFromGenome(chromosome, start, end):
     #genes = Fasta(genome)
     return genome[chromosome][start:end]
 
-
 def getPeaksFromBed(bed_path):
     """
+    Helper function
     Returns a list of locations of peaks in the format {chr, start, stop} from a bed file containing peaks
+    
+    Description
+
+    Parameters:
+    -----------
+        meme_path : path to the meme file
+
+    Returns:
+    --------
+        known_motifs_list : list of known motifs
+    
     """
     peaks = []
     file = open(bed_path)
     for line in file.readlines():
-        if '#' not in line[0:0]: 
+        if '#' not in line: 
             peaks.append(line.split('\t')[0:3])
+
+    file.close()
     return peaks
 
-
-def listOfPeakSeq(peak_info):
+def getListOfPeakSeqFromBed(bed_path):
     """
     Returns a list of all the peak sequences
+    Calls get peaks from Bed
+
+    Description
+
+    Parameters:
+    -----------
+        meme_path : path to the meme file
+
+    Returns:
+    --------
+        known_motifs_list : list of known motifs
     """
+    peaks = []
     peak_list = []
-    ent_list = getPeaksFromBed(bed)
+    ent_list = getPeaksFromBed(bed_path)
     for ent in ent_list:
-        peak_list.append(getSeqFromGenome(ent[0], ent[1], ent[2]))
+        temp_seq = getSeqFromGenome(int(ent[0]), int(ent[1]), int(ent[2]))
+        peak_list.append(temp_seq)
     return peak_list
 
-#may not be necessary
-def ComputeEnrichment(peak_total, peak_motif, bg_total, bg_motif):
-    """ Compute fisher exact test to test whether motif enriched in bound sequences
-    
-    Parameters
-    ----------
-    peak_total : int
-       Number of total peaks
-    peak_motif : int
-       Number of peaks matching the motif
-    bg_total : int
-       Number of background sequences
-    bg_motif : int
-       Number of background sequences matching the motif
-       
-    Returns
-    -------
-    pval : float
-       Fisher Exact Test p-value    
+def makeKnownMotifObjs(meme_path, background_freqs):
     """
-    pval = -1
-    # your code here
-    table = [[peak_motif, peak_total-peak_motif], [bg_motif, bg_total-bg_motif]]
-    odds, pval = scipy.stats.fisher_exact(table)
-    return pval
+    makes list of KnownMotif objects from the meme file
 
+    Parameters:
+    -----------
+        meme_path : path to the meme file
 
-def makeKnownMotifObjs(meme_path):
+    Returns:
+    --------
+        known_motifs_list : list of known motifs
+    """
     known_motifs_list = []
-    #KnownMotif(self, name, alength, w, pwm)
     file = open(meme_path)
     lines = file.readlines()
     i = 0
     while i < len(lines):
         if 'MOTIF' in lines[i]:
+           
             pwm_index_start = 0
-            if lines[i+1] == '': # empty line in case motif doesnt start yet
+            if 'letter-probability matrix' not in lines[i+1]: # empty line in case motif doesnt start yet
                 pwm_index_start = i+3
             else:
                 pwm_index_start = i+2
-            name = lines[i][5:] # name of the motif
+            name = lines[i][6:].strip() # name of the motif
             alength = 4
             w_str = 'w= '
             w_index =  lines[pwm_index_start-1].index(w_str)
             nsites_index = lines[pwm_index_start-1].index(' nsites')
-            w = lines[pwm_index_start-1][w_index + len(w_str) : nsites_index]
-            
-        i += 1
-    #return known_motifs_list
-    return 0
+            w = int(lines[pwm_index_start-1][w_index + len(w_str) : nsites_index])
+            j = pwm_index_start
+            k = 0
+            temp_pwm = [[0]*w]*alength
+            while j < len(lines):
+                if 'URL' in lines[j] or len(lines[j]) == 0:
+                    break
+                temp_line = lines[j].split()
+                if len(temp_line) == 0:
+                    break
+                pseudocount = 0.00001
+                temp_pwm[0][k] = math.log2(float(temp_line[0].strip())/background_freqs[0]+pseudocount)
+                temp_pwm[1][k] = math.log2(float(temp_line[1].strip())/background_freqs[1]+pseudocount)
+                temp_pwm[2][k] = math.log2(float(temp_line[2].strip())/background_freqs[2]+pseudocount)
+                temp_pwm[3][k] = math.log2(float(temp_line[3].strip())/background_freqs[3]+pseudocount)
+                k+=1
+                j+=1
+            i = j
+            known_motifs_list.append(KnownMotif.KnownMotif(name, alength, w, temp_pwm))
+        i+=1
+    return known_motifs_list
 
-makeKnownMotifObjs("../tests/motifs.meme")
+def calculateBackgroundFrequencies(background_seqs):
+    freqs = [0,0,0,0] # compute frequency of A, C, G, T
+    counts = [0,0,0,0]
+    for seq in background_seqs:
+        temp_seq = str(seq)
+        counts[0] += temp_seq.count("A")
+        counts[1] += temp_seq.count("C")
+        counts[2] += temp_seq.count("G")
+        counts[3] += temp_seq.count("T")
+    total =  sum(counts)
+    for i in range(len(freqs)):
+        freqs[i] = counts[i]/total
+    print(freqs)
+    return freqs
+
+#uselesssss
+def findMotifWithHighestScore(motif_list, seq_type):
+    """
+    Description
+
+    Parameters:
+    -----------
+        motif_list : list of KnownMotif objects (scores already updated)
+
+    Returns:
+    --------
+        known_motifs_list : list of known motifs
+    """
+    max_motif = motif_list[0]
+    for motif in motif_list:
+        if motif.getScore(seq_type) > max_motif.getScore(seq_type):
+            max_motif = motif
+    return max_motif
+
+def getListOfReversePeakSeq(forward_seqs):
+    reverse_seqs = []
+    for seq in forward_seqs:
+        reverse_seqs.append(ReverseComplement(seq))
+    return reverse_seqs
+
+def getRandomBackgroundSeq(chr, length):
+    """
+    Given a chromosome, get a random sequence of that length
+
+    Parameters:
+    -----------
+        chr: chromosome number of random seq
+        length: length of random seq that will be generated
+
+    Returns:
+    --------
+        the sequence
+    """
+    
+    length_of_chromosome = len(genome[chr])
+    start = random.randint(0, length_of_chromosome-length)
+    return getSeqFromGenome(chr, start, start + length)
+
+def generateListOfRandomSeqsFromPeaks(peaks_info):
+    #peaks_info from getPeaksFromBed 
+    random_seqs = []
+    for ent in peaks_info:
+        length = int(ent[2])-int(ent[1])
+        chr = ent[0]
+        random_seqs.append(getRandomBackgroundSeq(chr,length))
+    return random_seqs
+
+def setAllThresholds(known_motifs, background_seqs, pval):
+    for motif in known_motifs:
+        motif.calcAndSetThreshold(background_seqs, pval)
+
+#get the sequences of all the peaks
+
+bed_path_test = "../tests/short.bed" # "../tests/Oct4.peaks.bed"
+peak_seq_list = getListOfPeakSeqFromBed(bed_path_test)
+reverse_peak_seq_list = getListOfReversePeakSeq(peak_seq_list)
+random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path_test))
+
+# Get motifs
+# "../tests/motifs.meme"
+# "../tests/OCT4_motif.meme"
+# "../tests/short.meme"
+known_motifs = makeKnownMotifObjs("../tests/short.meme",calculateBackgroundFrequencies(random_seqs_list))
+
+# Score motifs based on peaks
+scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
+scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
+setAllThresholds(known_motifs, random_seqs_list, 0.01)
+#known_motifs[0].printPWM()
+
+#print(random_seqs_list)
+for motif in known_motifs:
+    print (str(motif))
+
+
+# compare forward and random then backward and random
+# chi square = sum (observed - expected)^2 / expected
+
+
+"""
+"""
+
+"""
+if __name__ == "__main__":
+    main()
+"""

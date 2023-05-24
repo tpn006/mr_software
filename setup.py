@@ -20,12 +20,12 @@ setup(
     name='mrsoftware',
     version=VERSION,
     description='CSE185 Demo Project',
-    author='Johnathan Narita and Tasha Nguyen',
+    author='Jonathan Narita and Tasha Nguyen',
     author_email='tpn006@ucsd.edu',
     packages=find_packages(),
     entry_points={
         "console_scripts": [
             "mrsoftware=mrsoftware.mrsoftware:main"
         ],
-    },
+    }
 )
