@@ -23,7 +23,8 @@ python3 mrsoftware.py -m "Path to the .meme file containing motif information" -
 To run `mrsoftware` on a small test example (using files in this repo):
 * copy GRCm38.fa to /MR_SOFTWARE/tests/ (this file is very large ~2.6GB)
 * go to the directory /MR_SOFTWARE/mrsoftware/
-* run: ```shell
+* run: 
+```
 python3 mrsoftware.py -m "../tests/short.meme" -g "../tests/GRCm38.fa" "../tests/short.bed"
 ```
 
