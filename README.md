@@ -58,8 +58,15 @@ DONE :)
 ```
 
 To compare to the output of `homer`, run:
+* go to the tests directory
+* run 
+
 ```
-findMotifsGenome.pl MR_SOFTWARE/tests/peaks MR_SOFTWARE/tests/ MR_SOFTWARE/test/HOMER 
+mkdir HOMER
+
+bed2pos short.bed > short.txt
+
+findMotifsGenome.pl short.txt GRCm38.fa HOMER 
 ```
 The outputs are not comparable at the moment as our tool is incomplete and doesn't have the logos or p-values yet
 # mrsoftware options
