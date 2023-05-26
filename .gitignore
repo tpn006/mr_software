@@ -1,4 +1,6 @@
-*.fa
-*.meme
-*.bed
+motifs.meme
+OCT4_motif.meme
+GRCm38.fa.fai
+Oct4.peaks.bed
 *.fai
+GRCm38.fa

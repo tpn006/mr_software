@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/ python3
 
 import argparse
 #from . import myutils as myutils
@@ -15,7 +15,7 @@ import argparse
 import random
 
 
-genome = Fasta("../tests/GRCm38.fa")
+genome = None #Fasta("../tests/GRCm38.fa")
 nucs = {"A": 0, "C": 1, "G": 2, "T": 3}
 
 class bcolors:
@@ -41,11 +41,13 @@ def ERROR(msg):
 	sys.stderr.write(bcolors.FAIL + "[ERROR]: " + bcolors.ENDC + "{msg}\n".format(msg=msg) )
 	sys.exit(1)
 
+def sysMessage(message):
+    sys.stdout.write(bcolors.OKCYAN + message)
+
+def writeMessage(str, output_file = sys.stdout):
+    output_file.write(str)
+
 def main():
-    genome_path = "../tests/GRCm38.fa"
-    bed_path = "../tests/Oct4.peaks.bed"
-    meme_path ="../tests/HOCOMOCOv11_core_MOUSE_mono_meme_format.meme" 
-    print("Hello wolr")
     parser = argparse.ArgumentParser(
 		prog="mrsoftware",
 		description="Command-line script to perform  motif recognition from BED file"
@@ -59,7 +61,7 @@ def main():
         # input the reference genome to use
     parser.add_argument("-g","--genome", help="Path to the reference genome that peaks will be pulled from", type=str, metavar="FILE", required=True)
     
-	# Output file to write to
+	## Output file to write to 
     parser.add_argument("-o", "--out", help="Write output to file. Default: stdout", metavar="FILE", type=str, required=False)
 
 	# Other options
@@ -74,11 +76,14 @@ def main():
     else: outf = open(args.out, "w")
 
     #Check file integrity
+    sysMessage("Initializing by checking argument validity\n")
     # genome
     if args.genome is not None:
         if not os.path.exists(args.genome):
             ERROR("{genome} does not exist".format(genome=args.genome))
         genome_path = args.genome
+        global genome
+        genome = Fasta(genome_path)
     else:
         ERROR("Path to Genome not provided :(")
         print(":(")
@@ -100,16 +105,38 @@ def main():
         ERROR("Path to bed file not provided :(")
         return # Just quit and give up
     
-    #get the sequences of all the peaks
-    peak_seq_list = getSeqFromPeakList(bed_path)
+    out_file = None
+    if args.out is not None:
+        out_file = open(args.out, 'w')
+    else:
+        out_file = sys.stdout
+
+   #get the sequences of all the peaks
+    peak_seq_list = getListOfPeakSeqFromBed(bed_path)
+    random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
+    
+    writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n", output_file=out_file)
+
 
     # Get motifs
-    known_motifs = makeKnownMotifObjs(meme_path)
+    known_motifs = makeKnownMotifObjs(meme_path, calculateBackgroundFrequencies(random_seqs_list))
+
+    writeMessage("There are " + str(len(known_motifs)) + " known motifs. \n", output_file=out_file)
 
     # Score motifs based on peaks
-    scoreAllSequencesForMotifs(peak_seq_list, known_motifs)
+    scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
+    scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
+    setAllThresholds(known_motifs, random_seqs_list, 0.01)
 
-    print(known_motifs[0].getScore())
+    known_motifs.sort(key = KnownMotif.KnownMotif.getThresh)
+    for motif in known_motifs:
+        writeMessage(str(motif) + "\n", output_file=out_file)
+    
+    # compare forward and random then backward and random
+    # chi square = sum (observed - expected)^2 / expected
+
+    sysMessage("DONE :)\n\n")
+
 
 def scoreAllSequencesForMotifs(peak_seq_list, motif_array, which_score):
     """
@@ -523,7 +550,6 @@ def calculateBackgroundFrequencies(background_seqs):
     total =  sum(counts)
     for i in range(len(freqs)):
         freqs[i] = counts[i]/total
-    print(freqs)
     return freqs
 
 #uselesssss
@@ -582,38 +608,6 @@ def setAllThresholds(known_motifs, background_seqs, pval):
     for motif in known_motifs:
         motif.calcAndSetThreshold(background_seqs, pval)
 
-#get the sequences of all the peaks
-
-bed_path_test = "../tests/short.bed" # "../tests/Oct4.peaks.bed"
-peak_seq_list = getListOfPeakSeqFromBed(bed_path_test)
-reverse_peak_seq_list = getListOfReversePeakSeq(peak_seq_list)
-random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path_test))
-
-# Get motifs
-# "../tests/motifs.meme"
-# "../tests/OCT4_motif.meme"
-# "../tests/short.meme"
-known_motifs = makeKnownMotifObjs("../tests/short.meme",calculateBackgroundFrequencies(random_seqs_list))
-
-# Score motifs based on peaks
-scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
-scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
-setAllThresholds(known_motifs, random_seqs_list, 0.01)
-#known_motifs[0].printPWM()
-
-#print(random_seqs_list)
-for motif in known_motifs:
-    print (str(motif))
-
-
-# compare forward and random then backward and random
-# chi square = sum (observed - expected)^2 / expected
-
-
-"""
-"""
-
-"""
+# Run Main
 if __name__ == "__main__":
     main()
-"""

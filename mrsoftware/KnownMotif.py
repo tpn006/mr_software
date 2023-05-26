@@ -33,7 +33,7 @@ class KnownMotif:
         temp_dist = self.rnd_scr_arr.copy()
         i = 1
         while i < num:
-            print(temp_dist.pop(temp_dist.index(max(temp_dist))))
+            # print(temp_dist.pop(temp_dist.index(max(temp_dist))))
             i+=1
         thresh = max(temp_dist)
         self.threshold = thresh
@@ -97,10 +97,11 @@ class KnownMotif:
         while i < ( len(sequence) - self.w + 1 ):
             scores.append(self.scoreSeq(sequence[i : i + self.w]))
             i += 1
-        scores.sort()
+        scores.sort(reverse = True)
         if len(scores) != 0:
             self.updateScore(scores[len(scores)-1], which_score) #update score with the highest score found (last thing when sorted is the highest score)
-    
+        
+        
     def ReverseComplement(self, sequence):
         """ Get the reverse complement of a sequence
                 Parameters
@@ -127,9 +128,20 @@ class KnownMotif:
             i = i-1
         return revcomp
 
+    def maxScore(self, sequence):
+        """
+        Score the sequence and its reverse complement and determine which is better
+        """
+        fwd_score = self.scoreSeq(sequence)
+        bwd_score = self.scoreSeq(self.ReverseComplement(sequence))
+        if fwd_score >= bwd_score:
+            return fwd_score
+        else:
+            return bwd_score
+
     def scoreSeq(self, sequence):
         """
-        Given a sequence, find the score of that given sequence
+        Given a sequence, find the score of that given sequence and return that score
         """
         score_fwd = 0
         i = 0
@@ -149,11 +161,11 @@ class KnownMotif:
                 score_bwd += 0
             else:
                 score_bwd += float(self.pwm[self.nucs[nuc]] [j])
-                print(float(self.pwm[self.nucs[nuc]] [j]))
+                
             j += 1
 
-            
-        if score_bwd < score_fwd:
+        #print("forward = " + str(score_fwd) + " Backward = " + str(score_bwd))
+        if score_bwd <= score_fwd:
             return score_fwd 
         else:
             return score_bwd 
@@ -163,17 +175,16 @@ class KnownMotif:
 
     def printPWM(self):
         print(str(self.pwm))
-    
-    def getScore(self, which_score):
-        if "forward" in which_score:
-            return self.forward_score
-        elif "backward" in which_score:
-            return self.backward_score
-        elif "random" in which_score:
-            return self.random_score
-    
-    def printScore(self):
-        print(str(self.score))
 
+    def printScoreArr(self):
+        print(str(self.score_arr))
+    
+    def getThresh(self):
+        return self.threshold
+
+    def getScoreArr(self):
+        return self.score_arr
+
+    # To String method    
     def __str__(self):
-        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold) + " randoms score: " + str(self.rnd_scr_arr)
+        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold)
