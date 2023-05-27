@@ -72,9 +72,9 @@ The outputs are not comparable at the moment as our tool is incomplete and doesn
 # mrsoftware options
 
 `mrsoftware.py` requires 3 inputs: 
-* a reference genome in .fa format. 
-* a file containing peak information in a .bed format.
-* a file containing motif information in a .meme format.
+* `-g` followed by a reference genome in .fa format. 
+* `-m` followed by a file containing motif information in a .meme format.
+* and lastly a file containing peak information in a .bed format.
 
 There is one optional input as of now:
 * an output file to write output to. If the option is not used, the tool uses the default which is sysout
