@@ -77,7 +77,7 @@ The outputs are not comparable at the moment as our tool is incomplete and doesn
 * and lastly a file containing peak information in a .bed format.
 
 There is one optional input as of now:
-* an output file to write output to. If the option is not used, the tool uses the default which is sysout
+* `-o` an output file to write output to. If the option is not used, the tool uses the default which is sysout
 The plan is to have the output be a required directory to create the .png of the motif logos and the .html to easily view all results.
 
 # File format
