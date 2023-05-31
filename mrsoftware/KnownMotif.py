@@ -1,4 +1,6 @@
 import sys
+import matplotlib.pyplot as plt
+import scipy
 
 class KnownMotif:
     forward_score = 0 # Running total of the highest score of each forward peak sequence
@@ -11,16 +13,32 @@ class KnownMotif:
     name = "" # Name of the known motif
     w = 0 # Length of the known motif
     alength = 4 # number of nucleotides in the pwm
-    pwm = [[0]*w]*alength # pwm[pos][A C G T] returns value at position of nucleotide
+    pwm = None # pwm[pos][A C G T] returns value at position of nucleotide
     nucs = {"A": 0, "C": 1, "G": 2, "T": 3}
-    forward_pval = 0
-    backward_pval = 0
+    pval = 0
 
     def __init__(self, name, alength, w, pwm):
         self.name = name
         self.w = w
         self.alength = alength
         self.pwm = pwm
+
+    def graphThreshold(self):
+        pwm_thresholds = []
+        fig = plt.figure()
+        fig.set_size_inches((10, 4))
+        null_scores = self.rnd_scr_arr
+        thresh = self.threshold
+        ax = fig.add_subplot(1, 3,1)
+        ax.hist(null_scores, bins=10)
+        ax.axvline(x=thresh, color="red")
+        ax.set_xlabel("Score")
+        ax.set_ylabel("Frequency")
+        ax.set_title(self.name)
+        pwm_thresholds.append(thresh)
+        fig.tight_layout()
+        fig.show()
+    
     def calcAndSetThreshold(self, background_sequences, pval):
         """
         Given a p-value threshold determine what score that is and set the threshold variable to that score
@@ -33,11 +51,31 @@ class KnownMotif:
         temp_dist = self.rnd_scr_arr.copy()
         i = 1
         while i < num:
-            # print(temp_dist.pop(temp_dist.index(max(temp_dist))))
+            temp_dist.pop(temp_dist.index(max(temp_dist)))
             i+=1
         thresh = max(temp_dist)
         self.threshold = thresh
-        
+        #self.graphThreshold()
+        #print(str("SCORE ARRAY") + str(self.rnd_scr_arr))
+
+    
+    def setPval(self):
+        peak_total = 0
+        peak_motif = 0
+        bg_total = 0
+
+        bg_motif  = 0 #FIX THIS LATER
+        print(len(self.rnd_scr_arr))
+        peak_total = len(self.score_arr)
+        for score in self.score_arr:
+            if score >= self.threshold:
+                peak_motif += 1
+        for score in self.rnd_scr_arr:
+            if score >= self.threshold:
+                bg_motif += 1
+        print("Peak total: " + str(peak_total) + " peak motif: " + str(peak_motif) + " Background total: " + str(peak_total) + " bgrnd motif: " + str(bg_motif))
+        self.pval = KnownMotif.ComputeEnrichment(peak_total, peak_motif, peak_total, bg_motif)
+    
     def ComputeEnrichment(peak_total, peak_motif, bg_total, bg_motif):
         """ 
         Compute fisher exact test to test whether motif enriched in bound sequences
@@ -91,13 +129,15 @@ class KnownMotif:
         Given a long sequence from a peak, find where this motif is best suited and then update the score.
         Calls a lot of scoreSeq with shorter sequences
         """
-        scores = [0]*(len(sequence)-self.w + 1) # list of scores. scores[i] should give the score of the substring sequence[i:i+n]
+        # list of scores. scores[i] should give the score of the substring sequence[i:i+n]. The default value for the score will be the maximum negative value so that the highest will always overwrite
+        #scores = [0]*(len(sequence)-self.w + 1)
+        scores = []
         i = 0
         # score the PWM on all spots in the sequence
         while i < ( len(sequence) - self.w + 1 ):
-            scores.append(self.scoreSeq(sequence[i : i + self.w]))
+            scores.append(self.maxScore(sequence[i : i + self.w]))
             i += 1
-        scores.sort(reverse = True)
+        scores.sort()
         if len(scores) != 0:
             self.updateScore(scores[len(scores)-1], which_score) #update score with the highest score found (last thing when sorted is the highest score)
         
@@ -125,6 +165,8 @@ class KnownMotif:
                 revcomp = revcomp + 'C'
             elif sequence[i] == 'T':
                 revcomp = revcomp + 'A'
+            elif sequence[i] == 'N':
+                revcomp = revcomp + 'N'
             i = i-1
         return revcomp
 
@@ -134,6 +176,7 @@ class KnownMotif:
         """
         fwd_score = self.scoreSeq(sequence)
         bwd_score = self.scoreSeq(self.ReverseComplement(sequence))
+        #print("Forward: " + str(fwd_score) + " Backward: " + str(bwd_score))
         if fwd_score >= bwd_score:
             return fwd_score
         else:
@@ -143,38 +186,29 @@ class KnownMotif:
         """
         Given a sequence, find the score of that given sequence and return that score
         """
-        score_fwd = 0
+        score_temp = 0
         i = 0
         for nuc in str(sequence):
             # if the thing is an N, then the score is a 0
             if 'N' in nuc:
-                score_fwd += 0
+                score_temp += 0
             else:
-                score_fwd += float(self.pwm[self.nucs[nuc]] [i])
+                score_temp += float(self.pwm[self.nucs[nuc]][i])
             i += 1
+        return score_temp
+    
 
-        score_bwd = 0
-        j = 0
-        for nuc in self.ReverseComplement(str(sequence)):
-            # if the thing is an N, then the score is a 0
-            if 'N' in nuc:
-                score_bwd += 0
-            else:
-                score_bwd += float(self.pwm[self.nucs[nuc]] [j])
-                
-            j += 1
-
-        #print("forward = " + str(score_fwd) + " Backward = " + str(score_bwd))
-        if score_bwd <= score_fwd:
-            return score_fwd 
-        else:
-            return score_bwd 
     
     def printName(self):
         print(self.name)
 
     def printPWM(self):
-        print(str(self.pwm))
+        nucs = ["A","C","G","T"]
+        for row in range(len(self.pwm)):
+            print(nucs[row], end = ": ")
+            for letter in self.pwm[row]:
+                print(str(letter)[0:4], end = " ")
+            print()
 
     def printScoreArr(self):
         print(str(self.score_arr))
@@ -187,4 +221,5 @@ class KnownMotif:
 
     # To String method    
     def __str__(self):
-        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold)
+        self.setPval() # MOVE THIS LINE
+        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold) + " pval:" + str(self.pval)

@@ -111,22 +111,24 @@ def main():
     else:
         out_file = sys.stdout
 
-   #get the sequences of all the peaks
+    #~~~~~~~~~~~~~~~~~~~~~~~ BEGIN PIPELINE ~~~~~~~~~~~~~~~~~~~~~~~~#
+    #get the sequences of all the peaks
     peak_seq_list = getListOfPeakSeqFromBed(bed_path)
     random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
     
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n", output_file=out_file)
 
-
     # Get motifs
+    print("Background frequency is: " + str(calculateBackgroundFrequencies(random_seqs_list)))
     known_motifs = makeKnownMotifObjs(meme_path, calculateBackgroundFrequencies(random_seqs_list))
 
     writeMessage("There are " + str(len(known_motifs)) + " known motifs. \n", output_file=out_file)
 
     # Score motifs based on peaks
-    scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
-    scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
+    #printMotfs(known_motifs)
     setAllThresholds(known_motifs, random_seqs_list, 0.01)
+    scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
+    scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
 
     known_motifs.sort(key = KnownMotif.KnownMotif.getThresh)
     for motif in known_motifs:
@@ -505,7 +507,6 @@ def makeKnownMotifObjs(meme_path, background_freqs):
     i = 0
     while i < len(lines):
         if 'MOTIF' in lines[i]:
-           
             pwm_index_start = 0
             if 'letter-probability matrix' not in lines[i+1]: # empty line in case motif doesnt start yet
                 pwm_index_start = i+3
@@ -519,7 +520,7 @@ def makeKnownMotifObjs(meme_path, background_freqs):
             w = int(lines[pwm_index_start-1][w_index + len(w_str) : nsites_index])
             j = pwm_index_start
             k = 0
-            temp_pwm = [[0]*w]*alength
+            temp_pwm = [[0 for i in range(w)] for j in range(alength)]
             while j < len(lines):
                 if 'URL' in lines[j] or len(lines[j]) == 0:
                     break
@@ -527,13 +528,21 @@ def makeKnownMotifObjs(meme_path, background_freqs):
                 if len(temp_line) == 0:
                     break
                 pseudocount = 0.00001
-                temp_pwm[0][k] = math.log2(float(temp_line[0].strip())/background_freqs[0]+pseudocount)
-                temp_pwm[1][k] = math.log2(float(temp_line[1].strip())/background_freqs[1]+pseudocount)
-                temp_pwm[2][k] = math.log2(float(temp_line[2].strip())/background_freqs[2]+pseudocount)
-                temp_pwm[3][k] = math.log2(float(temp_line[3].strip())/background_freqs[3]+pseudocount)
+
+                A_val = math.log2(float(temp_line[0].strip())/background_freqs[0]+pseudocount)
+                C_val = math.log2(float(temp_line[1].strip())/background_freqs[1]+pseudocount)
+                G_val = math.log2(float(temp_line[2].strip())/background_freqs[2]+pseudocount)
+                T_val = math.log2(float(temp_line[3].strip())/background_freqs[3]+pseudocount)
+                
+                temp_pwm[0][k] = float(A_val)
+                temp_pwm[1][k] = float(C_val)
+                temp_pwm[2][k] = float(G_val)
+                temp_pwm[3][k] = float(T_val)
                 k+=1
                 j+=1
+                
             i = j
+            
             known_motifs_list.append(KnownMotif.KnownMotif(name, alength, w, temp_pwm))
         i+=1
     return known_motifs_list
@@ -607,6 +616,11 @@ def generateListOfRandomSeqsFromPeaks(peaks_info):
 def setAllThresholds(known_motifs, background_seqs, pval):
     for motif in known_motifs:
         motif.calcAndSetThreshold(background_seqs, pval)
+
+def printMotfs(knownMotifs):
+    for motif in knownMotifs:
+        motif.printName()
+        print(motif.printPWM())
 
 # Run Main
 if __name__ == "__main__":
