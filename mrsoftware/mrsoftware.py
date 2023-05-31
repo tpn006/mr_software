@@ -1,21 +1,18 @@
 #!/usr/bin/ python3
-
+#TODO EVERYTIME THERE ARE ACTUAL CHANGES, RERUN THE INSTALL COMMAND TO MAKE IT ACTUALLY WORK AS A UNIX COMMAND. ALSO CHANGE THE IMPORT TO "from . "
 import argparse
-#from . import myutils as myutils
-#from mrsoftware import __version__
-import KnownMotif as KnownMotif
+#from . import KnownMotif
+import KnownMotif
 import os
 from pyfaidx import Fasta
 import sys
 import numpy as np
 import math
-import pandas as pd
-import scipy
 import argparse
 import random
 
 
-genome = None #Fasta("../tests/GRCm38.fa")
+genome = None
 nucs = {"A": 0, "C": 1, "G": 2, "T": 3}
 
 class bcolors:
@@ -115,32 +112,39 @@ def main():
     #get the sequences of all the peaks
     peak_seq_list = getListOfPeakSeqFromBed(bed_path)
     random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
-    
+    print("We are using " + str(len(random_seqs_list)) + " random sequences")
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n", output_file=out_file)
 
     # Get motifs
-    print("Background frequency is: " + str(calculateBackgroundFrequencies(random_seqs_list)))
-    known_motifs = makeKnownMotifObjs(meme_path, calculateBackgroundFrequencies(random_seqs_list))
+    backgroundFreqs = calculateBackgroundFrequencies(random_seqs_list)
+    print("Background frequency is: " + str(backgroundFreqs))
+    known_motifs = makeKnownMotifObjs(meme_path, backgroundFreqs)
 
     writeMessage("There are " + str(len(known_motifs)) + " known motifs. \n", output_file=out_file)
 
     # Score motifs based on peaks
     #printMotfs(known_motifs)
-    setAllThresholds(known_motifs, random_seqs_list, 0.01)
-    scoreAllSequencesForMotifs(random_seqs_list, known_motifs, "random")
-    scoreAllSequencesForMotifs(peak_seq_list, known_motifs, "forward")
+    setAllThresholds(known_motifs, random_seqs_list, 0.001)
+    scoreAllRandomSequencesForMotifs(random_seqs_list, known_motifs)
+    scoreAllSequencesForMotifs(peak_seq_list, known_motifs)
 
-    known_motifs.sort(key = KnownMotif.KnownMotif.getThresh)
+    #known_motifs.sort(key = KnownMotif.KnownMotif.getThresh)
     for motif in known_motifs:
         writeMessage(str(motif) + "\n", output_file=out_file)
     
     # compare forward and random then backward and random
     # chi square = sum (observed - expected)^2 / expected
+    #returnMotifsWithLowestPval(known_motifs, 4)
+    sysMessage("DONE :o\n\n")
 
-    sysMessage("DONE :)\n\n")
 
+def returnMotifsWithLowestPval(motif_array, num_of_motifs):
+    top_motifs = []
+    motif_array.sort(key = KnownMotif.KnownMotif.getPval)
+    for motif in motif_array:
+        print(str(motif))
 
-def scoreAllSequencesForMotifs(peak_seq_list, motif_array, which_score):
+def scoreAllSequencesForMotifs(peak_seq_list, motif_array):
     """
     Given a list of sequences and motifs, score all motifs with the sequences
 
@@ -154,9 +158,25 @@ def scoreAllSequencesForMotifs(peak_seq_list, motif_array, which_score):
         Nothing
     """
     for peak in peak_seq_list:
-        scoreAllMotifsByPeak(peak, motif_array, which_score)
+        scoreAllMotifsByPeak(peak, motif_array)
+    
+def scoreAllRandomSequencesForMotifs(peak_seq_list, motif_array):
+    """
+    Given a list of sequences and motifs, score all motifs with the sequences
 
-def scoreAllMotifsByPeak(peak_seq, motif_array, which_score):
+    Parameters:
+    -----------
+        peak_seq_list : List of sequences from peaks
+        motif_array : array of all the motifs to be scored
+
+    Returns:
+    --------
+        Nothing
+    """
+    for peak in peak_seq_list:
+        scoreAllRandomMotifsByPeak(peak, motif_array)
+
+def scoreAllRandomMotifsByPeak(peak_seq, motif_array):
     """
     For a given sequence, score all motifs using that sequence. Updates all the motifs with new scores
 
@@ -170,7 +190,23 @@ def scoreAllMotifsByPeak(peak_seq, motif_array, which_score):
         No Return
     """
     for motif in motif_array:
-        motif.scoreSequence(peak_seq, which_score)
+        motif.scoreRandSequence(str(peak_seq))
+
+def scoreAllMotifsByPeak(peak_seq, motif_array):
+    """
+    For a given sequence, score all motifs using that sequence. Updates all the motifs with new scores
+
+    Parameters:
+    -----------
+        peak_seq : Sequence of the peak to score motifs with
+        motif_array : array of all the known motif objects 
+
+    Returns:
+    --------
+        No Return
+    """
+    for motif in motif_array:
+        motif.scoreSequence(peak_seq)
 
 def getSeqFromPeakList(peaks):
     """
@@ -605,6 +641,7 @@ def getRandomBackgroundSeq(chr, length):
     return getSeqFromGenome(chr, start, start + length)
 
 def generateListOfRandomSeqsFromPeaks(peaks_info):
+    #print("running generateListOfRandomSeqsFromPeaks")
     #peaks_info from getPeaksFromBed 
     random_seqs = []
     for ent in peaks_info:
