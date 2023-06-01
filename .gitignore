@@ -4,3 +4,5 @@ GRCm38.fa.fai
 Oct4.peaks.bed
 *.fai
 GRCm38.fa
+mrsoftware.egg-info
+__pycache__

@@ -2,19 +2,16 @@ import sys
 import scipy
 
 class KnownMotif:
-    forward_score = 0 # Running total of the highest score of each forward peak sequence
     score_arr = []
     pvalThresh = 0
-    backward_score = 0 # Running total of the highest score of each reverse peak sequence
-    random_score = 0 # Running total of the highest score of each random peak sequence
     rnd_scr_arr = []
-    threshold = 0 # The score that divides matching from not matching in null dist
+    threshold_score = 0 # The score that divides matching from not matching in null dist
     name = "" # Name of the known motif
     w = 0 # Length of the known motif
     alength = 4 # number of nucleotides in the pwm
-    pwm = None # pwm[pos][A C G T] returns value at position of nucleotide
+    pwm = None # pwm[A C G T][pos] returns value at position of nucleotide 
     nucs = {"A": 0, "C": 1, "G": 2, "T": 3}
-    pval = 0
+    pval = 0 # pval from fisher exact test, significance of enrichment
 
     def __init__(self, name, alength, w, pwm):
         self.name = name
@@ -35,7 +32,9 @@ class KnownMotif:
         #print('length of score array: ' + str(len(self.score_arr)))
         num = int(len(self.rnd_scr_arr) * (1-pval))
         self.rnd_scr_arr.sort()
-        self.threshold = self.rnd_scr_arr[num]
+        self.threshold_score = self.rnd_scr_arr[num]
+        # print(self.rnd_scr_arr)
+        self.setPval()
 
         '''i = 1
         temp_dist = self.rnd_scr_arr.copy()
@@ -65,11 +64,50 @@ class KnownMotif:
         #print("Running scipy with threshold "+ str(self.threshold) +" Peak total: " + str(peak_total) + " peak motif: " + str(peak_motif) + " Background total: " + str(peak_total) + " bgrnd motif: " + str(bg_motif))
         self.pval = KnownMotif.ComputeEnrichment(peak_total, peak_motif, peak_total, bg_motif)
     """
+
+    def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 0.01):
+        # Get the threshold score by scoring all background sequences
+        back_scores = []
+        for seq in back_seqs:
+            back_scores.append(self.maxScore(seq))
+        back_scores.sort()
+        # Set the threshold score
+        num = len(back_scores)*(1-p_val)
+        thresh_score = back_scores[num]
+
+        # score peak seqs
+        sig_seq = 0 # This is the number of significant seqs
+        peak_scores = []
+        curr_scores = []
+        i = 0
+        for seq in peak_seqs:
+            i = 0
+            while i < ( len(seq) - self.w + 1 ):
+                curr_scores.append(self.maxScore(seq[i : i + self.w]))
+                i += 1
+            i = 0
+            curr_score = max(curr_scores)
+            peak_scores.append(curr_score)
+            curr_scores = []
+            if curr_score >= thresh_score:
+                sig_seq += 1
+            scores = []
+
+        # p value the stuff
+        table = [[sig_seq, len(peak_scores)-sig_seq], [num, len(back_scores)-num]]
+        odds, pval = scipy.stats.fisher_exact(table)
+        self.pval = pval
+        
+
+
+        
+
+
     def setPval(self):
         #Assume threshold already set
         fwd_peak_pass = 0
         for seq in self.score_arr:
-            if seq > self.threshold:
+            if seq > self.threshold_score:
                 fwd_peak_pass += 1  
         peak_total = len(self.score_arr)
         bg_total = peak_total # FOR NOW BECAUSE rnd_scr_arr is growing for no reason
@@ -96,9 +134,6 @@ class KnownMotif:
         self.score_arr.append(float(val))
 
     def updateScoreRand(self, val):
-        #if self.rnd_scr_arr != None:
-        #    if len(self.rnd_scr_arr) == 82:
-        #        self.rnd_scr_arr = []
         self.rnd_scr_arr.append(float(val))
 
     def scoreSequence(self, sequence):
@@ -129,12 +164,12 @@ class KnownMotif:
         i = 0
         # score the PWM on all spots in the sequence
         while i < ( len(sequence) - self.w + 1 ):
-            scores.append(self.maxScore(sequence[i : i + self.w]))
+            scores.append(self.maxScore(sequence[i : i + self.w -1]))
             i += 1
         scores.sort()
         if len(scores) != 0:
             self.updateScoreRand(max(scores)) #update score with the highest score found (last thing when sorted is the highest score)
-    
+    # WHY SITN THSI WORKING
 
     def ReverseComplement(self, sequence):
         """ Get the reverse complement of a sequence
@@ -185,13 +220,13 @@ class KnownMotif:
         for nuc in str(sequence):
             # if the thing is an N, then the score is a 0
             if 'N' in nuc:
-                score_temp += 0
+                score_temp += 0 
             else:
+                print(i)
+                print(nuc)
                 score_temp += float(self.pwm[self.nucs[nuc]][i])
             i += 1
         return score_temp
-    
-
     
     def printName(self):
         print(self.name)
@@ -208,7 +243,7 @@ class KnownMotif:
         print(str(self.score_arr))
     
     def getThresh(self):
-        return self.threshold
+        return self.threshold_score
 
     def getScoreArr(self):
         return self.score_arr
@@ -218,5 +253,5 @@ class KnownMotif:
         
     # To String method    
     def __str__(self):
-        self.setPval() # MOVE THIS LINE
-        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold) + " pval:" + str(self.pval)
+        #self.setPval() # MOVE THIS LINE
+        return "MOTIF: " + self.name + " threshold score: " + str(self.threshold_score) + " pval:" + str(self.pval)

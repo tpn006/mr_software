@@ -58,7 +58,7 @@ def main():
         # input the reference genome to use
     parser.add_argument("-g","--genome", help="Path to the reference genome that peaks will be pulled from", type=str, metavar="FILE", required=True)
     
-	## Output file to write to 
+	# Output file to write to 
     parser.add_argument("-o", "--out", help="Write output to file. Default: stdout", metavar="FILE", type=str, required=False)
 
 	# Other options
@@ -82,17 +82,19 @@ def main():
         global genome
         genome = Fasta(genome_path)
     else:
-        ERROR("Path to Genome not provided :(")
+        ERROR("Path to Genome not provided :O")
         print(":(")
         return # Just quit and give up
+    
     # meme 
     if args.meme is not None:
         if not os.path.exists(args.meme):
             ERROR("{meme} does not exist".format(meme=args.meme) )
         meme_path = args.meme
     else:
-        ERROR("Path to meme file not provided :(")
+        ERROR("Path to meme file not provided >:(")
         return # Just quit and give up
+    
     # bed
     if args.bed is not None:
         if not os.path.exists(args.bed):
@@ -119,30 +121,56 @@ def main():
     backgroundFreqs = calculateBackgroundFrequencies(random_seqs_list)
     print("Background frequency is: " + str(backgroundFreqs))
     known_motifs = makeKnownMotifObjs(meme_path, backgroundFreqs)
+    for motif in known_motifs:
+        motif.magicDoAllFunction(peak_seq_list, random_seqs_list) #MAKE THE PWM SOON
+    '''
 
     writeMessage("There are " + str(len(known_motifs)) + " known motifs. \n", output_file=out_file)
 
     # Score motifs based on peaks
     #printMotfs(known_motifs)
-    setAllThresholds(known_motifs, random_seqs_list, 0.001)
     scoreAllRandomSequencesForMotifs(random_seqs_list, known_motifs)
     scoreAllSequencesForMotifs(peak_seq_list, known_motifs)
+    setAllThresholds(known_motifs, random_seqs_list, 0.001)
+    '''
 
     #known_motifs.sort(key = KnownMotif.KnownMotif.getThresh)
     for motif in known_motifs:
         writeMessage(str(motif) + "\n", output_file=out_file)
     
-    # compare forward and random then backward and random
-    # chi square = sum (observed - expected)^2 / expected
     #returnMotifsWithLowestPval(known_motifs, 4)
-    sysMessage("DONE :o\n\n")
+    sysMessage("DONE >:[ \n\n")
 
 
 def returnMotifsWithLowestPval(motif_array, num_of_motifs):
-    top_motifs = []
-    motif_array.sort(key = KnownMotif.KnownMotif.getPval)
-    for motif in motif_array:
-        print(str(motif))
+    """
+    will return the top motifs with the lowest p values
+
+    Parameters:
+    -----------
+        motif_array: list of arrays
+        num_of_motifs: number of top motifs to return
+    
+    Returns:
+    --------
+        list of top motifs (length num_of_motifs)
+
+    """
+    sorted_motifs = motif_array[0]
+    #motif_array.sort(key = KnownMotif.KnownMotif.getPval)
+    i = 0
+    while i < len(motif_array):
+        j = 0
+        while j < len(sorted_motifs):
+            if motif_array[i].getPval < sorted_motifs[j].getPval:
+                sorted_motifs.insert(j, motif_array[i])
+                break
+            j+=1
+        if j == len(sorted_motifs):
+            sorted_motifs.append(motif_array[i])
+        i+=1
+    return sorted_motifs[:num_of_motifs]
+
 
 def scoreAllSequencesForMotifs(peak_seq_list, motif_array):
     """
@@ -353,7 +381,7 @@ def GetThreshold(null_dist, pval):
     Parameters
     ----------
     null_dist : list of float
-       Null distribution of scores
+       Null distribution of scores (random scores)
     pval : float
        % of null_dist that should be above the threshold returned
        
@@ -575,8 +603,7 @@ def makeKnownMotifObjs(meme_path, background_freqs):
                 temp_pwm[2][k] = float(G_val)
                 temp_pwm[3][k] = float(T_val)
                 k+=1
-                j+=1
-                
+                j+=1 
             i = j
             
             known_motifs_list.append(KnownMotif.KnownMotif(name, alength, w, temp_pwm))
@@ -596,25 +623,6 @@ def calculateBackgroundFrequencies(background_seqs):
     for i in range(len(freqs)):
         freqs[i] = counts[i]/total
     return freqs
-
-#uselesssss
-def findMotifWithHighestScore(motif_list, seq_type):
-    """
-    Description
-
-    Parameters:
-    -----------
-        motif_list : list of KnownMotif objects (scores already updated)
-
-    Returns:
-    --------
-        known_motifs_list : list of known motifs
-    """
-    max_motif = motif_list[0]
-    for motif in motif_list:
-        if motif.getScore(seq_type) > max_motif.getScore(seq_type):
-            max_motif = motif
-    return max_motif
 
 def getListOfReversePeakSeq(forward_seqs):
     reverse_seqs = []
