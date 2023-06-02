@@ -112,15 +112,21 @@ def main():
 
     #~~~~~~~~~~~~~~~~~~~~~~~ BEGIN PIPELINE ~~~~~~~~~~~~~~~~~~~~~~~~#
     #get the sequences of all the peaks
+    print("Getting peak sequences")
     peak_seq_list = getListOfPeakSeqFromBed(bed_path)
-    random_seqs_list = generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
-    print("We are using " + str(len(random_seqs_list)) + " random sequences")
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n", output_file=out_file)
+    print("Creating random sequences from the genome")
+    # hardcoding in chr17 and length of 17
+    random_seqs_list = generateRandomSeqsFromChr("chr17", len(peak_seq_list), 75) #generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
+    print("We are using " + str(len(random_seqs_list)) + " random sequences")
 
     # Get motifs
+    print("Calculating random backgrounds")
     backgroundFreqs = calculateBackgroundFrequencies(random_seqs_list)
     print("Background frequency is: " + str(backgroundFreqs))
+    print("Motifs from the meme file")
     known_motifs = makeKnownMotifObjs(meme_path, backgroundFreqs)
+    print("We are using " + str(len(known_motifs)) + " motifs")
     for motif in known_motifs:
         motif.magicDoAllFunction(peak_seq_list, random_seqs_list) #MAKE THE PWM SOON
     '''
@@ -140,6 +146,15 @@ def main():
     
     #returnMotifsWithLowestPval(known_motifs, 4)
     sysMessage("DONE >:[ \n\n")
+
+def generateRandomSeqsFromChr(chr, num, length):
+    """
+    Get <num> random sequences from chromosome <chr>
+    """
+    backgroundSeqs = []
+    for i in range(num):
+        backgroundSeqs.append(getRandomBackgroundSeq(chr, length))
+    return backgroundSeqs
 
 
 def returnMotifsWithLowestPval(motif_array, num_of_motifs):
@@ -503,7 +518,15 @@ def getSeqFromGenome(chromosome, start, end):
     string of nucleotides
     """
     #genes = Fasta(genome)
-    return genome[chromosome][start:end]
+    if chromosome in genome: # if chromosome is in the same format as the indexing
+        return str(genome[chromosome][start:end])
+    elif ("chr"+str(chromosome)) in genome: # if you need to add "chr" to the chromosome number to get it to match
+        return str(genome["chr"+str(chromosome)][start:end])
+    elif str(chromosome)[3:] in genome: # if you need to remove "chr" from the chromosome name to get it to match the index
+        return str(genome[str(chromosome)[3:]][start:end])
+    else:
+        print("CHROMOSOME NOT FOUND!!!!! >:[ ") # TODO CHANGE THIS to a REAL ERROR Rather than this print
+
 
 def getPeaksFromBed(bed_path):
     """
@@ -550,7 +573,7 @@ def getListOfPeakSeqFromBed(bed_path):
     ent_list = getPeaksFromBed(bed_path)
     for ent in ent_list:
         temp_seq = getSeqFromGenome(int(ent[0]), int(ent[1]), int(ent[2]))
-        peak_list.append(temp_seq)
+        peak_list.append(str(temp_seq)) # add the string of the sequence
     return peak_list
 
 def makeKnownMotifObjs(meme_path, background_freqs):
@@ -643,8 +666,15 @@ def getRandomBackgroundSeq(chr, length):
     --------
         the sequence
     """
-    
-    length_of_chromosome = len(genome[chr])
+    length_of_chromosome = -1
+    if chr in genome: # if chromosome is in the same format as the indexing
+        length_of_chromosome = len(genome[chr])
+    elif ("chr"+str(chr)) in genome: # if you need to add "chr" to the chromosome number to get it to match
+        length_of_chromosome = len(str(genome["chr"+str(chr)]))
+    elif str(chr)[3:] in genome: # if you need to remove "chr" from the chromosome name to get it to match the index
+        length_of_chromosome = len(str(genome[str(chr)[3:]]))
+    else:
+        print("CHROMOSOME NOT FOUND!!!!! >:[ ") # TODO CHANGE THIS to a REAL ERROR Rather than this print
     start = random.randint(0, length_of_chromosome-length)
     return getSeqFromGenome(chr, start, start + length)
 

@@ -20,6 +20,8 @@ The basic usage of `mrsoftware` is:
 python3 mrsoftware.py -m "Path to the .meme file containing motif information" -g "Path to the .fa file containing the reference genome" "Path to the .bed file containing peak information"
 ```
 
+Another option is to install `mrsoftware`. This is done by using `setuptools`. You can verify if `setuptools` is installed correctly by using _____. Otherwise, you can install `setuptools` though ________ for python2 or ______ for python3. This allows you to use the command `python3 setup.py install` followed by `chmod +x mrsoftware` allowing the user to use `mrsoftware` through commandline. ex: ```mrsoftware -m <path to meme file> -g <path to genome> <path to bed>``` 
+
 To run `mrsoftware` on a small test example (using files in this repo):
 * copy GRCm38.fa to /MR_SOFTWARE/tests/ (this file is very large ~2.6GB so not stored on github. We recommend: https://www.ncbi.nlm.nih.gov/assembly/GCF_000001635.20/)
 * go to the directory /MR_SOFTWARE/mrsoftware/

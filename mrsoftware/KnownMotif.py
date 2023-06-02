@@ -64,37 +64,63 @@ class KnownMotif:
         #print("Running scipy with threshold "+ str(self.threshold) +" Peak total: " + str(peak_total) + " peak motif: " + str(peak_motif) + " Background total: " + str(peak_total) + " bgrnd motif: " + str(bg_motif))
         self.pval = KnownMotif.ComputeEnrichment(peak_total, peak_motif, peak_total, bg_motif)
     """
+    def quickScore(self, sequence):
+        if sequence == None: # IF we get grabage input :(
+            return
+        scores = []
+        # Make a shifting window to go through the pwm with
+        num_sequences = len(sequence) - self.w
+        for shift in range(num_sequences):
+            score = 0
+            # Go through each letter in the sequence and add the score from that value in the PWM
+            for i in range(self.w -1):
+                nuc = str.upper((sequence[shift:shift + self.w])[i])
+                if 'N' in nuc:
+                    score += 0
+                else:
+                    score += self.pwm[self.nucs[nuc]][i]
+            # Add the score to an array for each sequence
+            scores.append(float(score))
+        # Only return the max
+        if scores == None or len(scores) < 1: #Lowkey idk why this is happening
+            return
+        return max(scores)
 
     def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 0.01):
         # Get the threshold score by scoring all background sequences
         back_scores = []
         for seq in back_seqs:
-            back_scores.append(self.maxScore(seq))
+            back_scores.append(self.quickScore(seq))
         back_scores.sort()
+        num_expected_to_pass_at_pval = int(len(back_scores)*(1-p_val))
         # Set the threshold score
-        num = len(back_scores)*(1-p_val)
-        thresh_score = back_scores[num]
+        self.threshold_score = back_scores[num_expected_to_pass_at_pval]
 
         # score peak seqs
         sig_seq = 0 # This is the number of significant seqs
         peak_scores = []
-        curr_scores = []
         i = 0
         for seq in peak_seqs:
-            i = 0
-            while i < ( len(seq) - self.w + 1 ):
-                curr_scores.append(self.maxScore(seq[i : i + self.w]))
-                i += 1
-            i = 0
-            curr_score = max(curr_scores)
+            # find the max of the forward and reverse
+            if seq == None:
+                continue
+            fw_score = self.quickScore(seq)
+            bw_score = self.quickScore(self.ReverseComplement(seq))
+            if fw_score == None:
+                print(seq + "has none type fw")
+                continue
+            if bw_score == None:
+                print(seq + "has none type bw")
+                continue
+            curr_score = max([fw_score, bw_score ])
             peak_scores.append(curr_score)
-            curr_scores = []
-            if curr_score >= thresh_score:
+            if curr_score >= self.threshold_score:
                 sig_seq += 1
-            scores = []
 
         # p value the stuff
-        table = [[sig_seq, len(peak_scores)-sig_seq], [num, len(back_scores)-num]]
+        # table = [[num peaks that pass threshold, num peaks that don't pass],[num background that pass, num background that doesnt pass]]
+        table = [[sig_seq, len(peak_scores)-sig_seq], [num_expected_to_pass_at_pval, len(back_scores)-num_expected_to_pass_at_pval]]
+        print("Our fisher exact table for" + self.name+ " shows: " + str(table))
         odds, pval = scipy.stats.fisher_exact(table)
         self.pval = pval
         
@@ -184,7 +210,15 @@ class KnownMotif:
                 Reverse complement of sequence
         """
         revcomp = ""
+        sequence = str.upper(sequence)
         i = len(sequence)-1
+        nuc_comps = {'A':'T','T':'A','G':'C','C':'G','N':'N'}
+        for nuc in reversed(sequence):
+            revcomp += nuc_comps[str.upper(nuc)]
+        
+        #print(str(len(sequence)) + " compared to " + str(len(revcomp)))
+        return revcomp
+        """
         while i >= 0:
             if sequence[i] == 'A':
                 revcomp = revcomp + 'T'
@@ -198,6 +232,7 @@ class KnownMotif:
                 revcomp = revcomp + 'N'
             i = i-1
         return revcomp
+        """
 
     def maxScore(self, sequence):
         """
