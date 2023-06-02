@@ -86,15 +86,17 @@ class KnownMotif:
             return
         return max(scores)
 
-    def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 0.01):
+    def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 1e-12): # For most promoter datasets, motifs with a p-value of more than 1e-10 or even 1e-12 are likely to be false positives. (from HOMER)
         # Get the threshold score by scoring all background sequences
         back_scores = []
         for seq in back_seqs:
             back_scores.append(self.quickScore(seq))
         back_scores.sort()
-        num_expected_to_pass_at_pval = int(len(back_scores)*(1-p_val))
+        num_expected_to_fail_at_pval = int(len(back_scores)*(1-p_val))
+        num_expected_to_pass_at_pval = int(len(back_scores)*(p_val))
+        
         # Set the threshold score
-        self.threshold_score = back_scores[num_expected_to_pass_at_pval]
+        self.threshold_score = back_scores[num_expected_to_fail_at_pval]
 
         # score peak seqs
         sig_seq = 0 # This is the number of significant seqs
@@ -120,7 +122,7 @@ class KnownMotif:
         # p value the stuff
         # table = [[num peaks that pass threshold, num peaks that don't pass],[num background that pass, num background that doesnt pass]]
         table = [[sig_seq, len(peak_scores)-sig_seq], [num_expected_to_pass_at_pval, len(back_scores)-num_expected_to_pass_at_pval]]
-        print("Our fisher exact table for" + self.name+ " shows: " + str(table))
+        print("Our fisher exact table for " + self.name+ " shows: " + str(table))
         odds, pval = scipy.stats.fisher_exact(table)
         self.pval = pval
         

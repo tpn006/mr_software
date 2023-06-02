@@ -27,7 +27,7 @@ To run `mrsoftware` on a small test example (using files in this repo):
 * go to the directory /MR_SOFTWARE/mrsoftware/
 * run: 
 ```
-python3 mrsoftware.py -m "../tests/short.meme" -g "../tests/GRCm38.fa" "../tests/short.bed"
+python3 mrsoftware.py -m "../tests/short.meme" -g "../tests/GRCm38.chr17.fa" "../tests/short.bed"
 ```
 
 Since the project is still a work in progress, this will only output some verification information about the files. You will see an output as follows:
