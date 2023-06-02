@@ -86,7 +86,8 @@ class KnownMotif:
             return
         return max(scores)
 
-    def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 1e-12): # For most promoter datasets, motifs with a p-value of more than 1e-10 or even 1e-12 are likely to be false positives. (from HOMER)
+    
+    def magicDoAllFunction(self, peak_seqs, back_seqs, p_val = 0.001): # For most promoter datasets, motifs with a p-value of more than 1e-10 or even 1e-12 are likely to be false positives. (from HOMER)
         # Get the threshold score by scoring all background sequences
         back_scores = []
         for seq in back_seqs:

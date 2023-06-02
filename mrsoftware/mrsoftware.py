@@ -129,6 +129,7 @@ def main():
     print("We are using " + str(len(known_motifs)) + " motifs")
     print("Creating new randomly generated sequences")
     amount = 1000
+    amount = len(peak_seq_list)
     length_of_random = 20
     random_generated_seqs_list = createArrOfRandomlyGeneratedSeqs(amount, backgroundFreqs, length_of_random)
     print("Done creating " + str(amount) + "random sequenceis of length " + str(length_of_random))
