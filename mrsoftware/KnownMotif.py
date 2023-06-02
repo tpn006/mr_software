@@ -214,8 +214,11 @@ class KnownMotif:
         i = len(sequence)-1
         nuc_comps = {'A':'T','T':'A','G':'C','C':'G','N':'N'}
         for nuc in reversed(sequence):
-            revcomp += nuc_comps[str.upper(nuc)]
-        
+            if nuc in nuc_comps:
+                revcomp += nuc_comps[str.upper(nuc)]
+            else:
+                revcomp += 'N'
+                
         #print(str(len(sequence)) + " compared to " + str(len(revcomp)))
         return revcomp
         """
