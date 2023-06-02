@@ -127,8 +127,13 @@ def main():
     print("Motifs from the meme file")
     known_motifs = makeKnownMotifObjs(meme_path, backgroundFreqs)
     print("We are using " + str(len(known_motifs)) + " motifs")
+    print("Creating new randomly generated sequences")
+    amount = 1000
+    length_of_random = 20
+    random_generated_seqs_list = createArrOfRandomlyGeneratedSeqs(amount, backgroundFreqs, length_of_random)
+    print("Done creating " + str(amount) + "random sequenceis of length " + str(length_of_random))
     for motif in known_motifs:
-        motif.magicDoAllFunction(peak_seq_list, random_seqs_list) #MAKE THE PWM SOON
+        motif.magicDoAllFunction(peak_seq_list, random_generated_seqs_list) #MAKE THE PWM SOON
     '''
 
     writeMessage("There are " + str(len(known_motifs)) + " known motifs. \n", output_file=out_file)
@@ -153,7 +158,9 @@ def generateRandomSeqsFromChr(chr, num, length):
     """
     backgroundSeqs = []
     for i in range(num):
-        backgroundSeqs.append(getRandomBackgroundSeq(chr, length))
+        toAdd = getRandomBackgroundSeq(chr, length)
+        if toAdd != None:
+            backgroundSeqs.append(toAdd)
     return backgroundSeqs
 
 
@@ -464,6 +471,25 @@ def ReverseComplement(sequence):
             revcomp = revcomp + 'A'
         i = i-1
     return revcomp
+def randomSeqFromFrequencies(frequencies, length):
+    """
+    Given the frequencies and desiered length, generate a random sequence to fit the request.
+    """
+    sequence = ""
+    nuceleotides = ["A", "C", "G", "T"]
+    for i in range(length):
+        sequence += random.choices(nuceleotides,weights=frequencies)[0]
+    return sequence
+
+
+
+def createArrOfRandomlyGeneratedSeqs(num, frequencies,length):
+    """
+    Given a number of sequences to generate, the frequencies at which those appear, and the length of the sequence, return an array of sequences
+    """
+    return [randomSeqFromFrequencies(frequencies, length) for i in range(num)]
+
+
 
 def ComputeNucFreqs(sequences, background_freqs = [0.25,0.25,0.25,0.25]):
     """ 
@@ -522,10 +548,10 @@ def getSeqFromGenome(chromosome, start, end):
         return str(genome[chromosome][start:end])
     elif ("chr"+str(chromosome)) in genome: # if you need to add "chr" to the chromosome number to get it to match
         return str(genome["chr"+str(chromosome)][start:end])
-    elif str(chromosome)[3:] in genome: # if you need to remove "chr" from the chromosome name to get it to match the index
+    elif str(chromosome).removeprefix("chr") in genome: # if you need to remove "chr" from the chromosome name to get it to match the index
         return str(genome[str(chromosome)[3:]][start:end])
     else:
-        print("CHROMOSOME NOT FOUND!!!!! >:[ ") # TODO CHANGE THIS to a REAL ERROR Rather than this print
+        print("CHROMOSOME NOT FOUND!!!!! in getSeqFromGenome >:[ Params were: " + str(chromosome) +" at "+ str(start) +":"+ str(end)) # TODO CHANGE THIS to a REAL ERROR Rather than this print
 
 
 def getPeaksFromBed(bed_path):
@@ -573,7 +599,8 @@ def getListOfPeakSeqFromBed(bed_path):
     ent_list = getPeaksFromBed(bed_path)
     for ent in ent_list:
         temp_seq = getSeqFromGenome(int(ent[0]), int(ent[1]), int(ent[2]))
-        peak_list.append(str(temp_seq)) # add the string of the sequence
+        if temp_seq != None: # will be None if the chromosome isnt available
+            peak_list.append(str(temp_seq)) # add the string of the sequence
     return peak_list
 
 def makeKnownMotifObjs(meme_path, background_freqs):
