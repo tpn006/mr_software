@@ -1,8 +1,8 @@
-motifs.meme
-OCT4_motif.meme
-GRCm38.fa.fai
-Oct4.peaks.bed
+#motifs.meme
+#OCT4_motif.meme
+#GRCm38.fa.fai
+#Oct4.peaks.bed
 *.fai
 GRCm38.fa
-mrsoftware.egg-info
+smrsoftware.egg-info
 __pycache__
