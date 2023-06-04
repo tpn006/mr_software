@@ -115,11 +115,12 @@ def main():
     #~~~~~~~~~~~~~~~~~~~~~~~ BEGIN PIPELINE ~~~~~~~~~~~~~~~~~~~~~~~~#
     #get the sequences of all the peaks
     writeMessage("Getting peak sequences\n")
-    peak_seq_list = getListOfPeakSeqFromBed(bed_path)
+    peak_seq_list, random_background_seqs_list = getListOfPeakSeqFromBed(bed_path)
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n")
     writeMessage("Creating random sequences from the genome\n")
     # hardcoding in chr17 and length of 17 FIX THIS
-    random_background_seqs_list = generateRandomSeqsFromChr("17", len(peak_seq_list), 75) #generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
+    #random_background_seqs_list = generateRandomSeqsFromChr("17", len(peak_seq_list), 75) #generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
+    #random_background_seqs_list = generateRandomSeqsFromChr()
     writeMessage("We are using " + str(len(random_background_seqs_list)) + " random sequences\n")
 
     # Get motifs
@@ -261,14 +262,18 @@ def getListOfPeakSeqFromBed(bed_path):
     Returns:
     --------
         peak_list : list of peaks (nucleotide sequence)
+        random_seq_list : list of random ones from that genome
     """
     peak_list = []
+    random_list = []
     ent_list = getPeaksFromBed(bed_path)
     for ent in ent_list:
         temp_seq = getSeqFromGenome(ent[0], int(ent[1]), int(ent[2]))
+        temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])- int(ent[1]))
         if temp_seq != None: # will be None if the chromosome isnt available
             peak_list.append(str(temp_seq)) # add the string of the sequence
-    return peak_list
+            random_list.append(str(temp_rand))
+    return peak_list, random_list
 
 def makeKnownMotifObjs(meme_path, background_freqs):
     """
