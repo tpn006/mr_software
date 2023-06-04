@@ -1,3 +1,0 @@
-[console_scripts]
-mrsoftware = mrsoftware.mrsoftware:main
-

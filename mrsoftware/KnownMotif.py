@@ -1,5 +1,5 @@
 import sys
-import scipy
+import scipy.stats 
 
 class KnownMotif:
     score_arr = []

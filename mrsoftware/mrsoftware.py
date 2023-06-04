@@ -39,7 +39,7 @@ def ERROR(msg):
 	sys.exit(1)
 
 def sysMessage(message):
-    sys.stdout.write(bcolors.OKCYAN + message)
+    sys.stdout.write(bcolors.OKCYAN + message + bcolors.ENDC)
 
 def writeMessage(str, output_file = sys.stdout):
     output_file.write(str)
@@ -52,9 +52,9 @@ def main():
 
 	# Input files
         # input Bed File
-    parser.add_argument("bed", help="BED file", type=str)
+    parser.add_argument("bed", help="path to .BED file with the peaks", type=str)
         # input meme file of known motifs  
-    parser.add_argument("-m", "--meme", help="meme file corresponding to the transcription factor", type=str, metavar="FILE", required=True)
+    parser.add_argument("-m", "--meme", help="path to .meme file containing nucleotide probability matrices for motifs to test for enrichment", type=str, metavar="FILE", required=True)
         # input the reference genome to use
     parser.add_argument("-g","--genome", help="Path to the reference genome that peaks will be pulled from", type=str, metavar="FILE", required=True)
     
@@ -115,12 +115,9 @@ def main():
     #~~~~~~~~~~~~~~~~~~~~~~~ BEGIN PIPELINE ~~~~~~~~~~~~~~~~~~~~~~~~#
     #get the sequences of all the peaks
     writeMessage("Getting peak sequences\n")
+    writeMessage("Collecting random sequences from the genome\n")
     peak_seq_list, random_background_seqs_list = getListOfPeakSeqFromBed(bed_path)
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n")
-    writeMessage("Creating random sequences from the genome\n")
-    # hardcoding in chr17 and length of 17 FIX THIS
-    #random_background_seqs_list = generateRandomSeqsFromChr("17", len(peak_seq_list), 75) #generateListOfRandomSeqsFromPeaks(getPeaksFromBed(bed_path))
-    #random_background_seqs_list = generateRandomSeqsFromChr()
     writeMessage("We are using " + str(len(random_background_seqs_list)) + " random sequences\n")
 
     # Get motifs
@@ -267,9 +264,10 @@ def getListOfPeakSeqFromBed(bed_path):
     peak_list = []
     random_list = []
     ent_list = getPeaksFromBed(bed_path)
+    print("There are " + str(len(ent_list)) + " peaks")
     for ent in ent_list:
         temp_seq = getSeqFromGenome(ent[0], int(ent[1]), int(ent[2]))
-        temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])- int(ent[1]))
+        temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])-int(ent[1]))
         if temp_seq != None: # will be None if the chromosome isnt available
             peak_list.append(str(temp_seq)) # add the string of the sequence
             random_list.append(str(temp_rand))
