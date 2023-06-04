@@ -114,9 +114,13 @@ def main():
 
     #~~~~~~~~~~~~~~~~~~~~~~~ BEGIN PIPELINE ~~~~~~~~~~~~~~~~~~~~~~~~#
     #get the sequences of all the peaks
+    writeMessage("Optimizing for provided .fa")
+    needs_chr = determineIfNeedCHR(genome_path)
+    writeMessage("Needs to add \"chr\" is " + str(needs_chr) + "\n")
+
     writeMessage("Getting peak sequences\n")
     writeMessage("Collecting random sequences from the genome\n")
-    peak_seq_list, random_background_seqs_list = getListOfPeakSeqFromBed(bed_path)
+    peak_seq_list, random_background_seqs_list = getListOfPeakSeqFromBed(bed_path, need_chr = needs_chr)
     writeMessage("There are " + str(len(peak_seq_list)) + " peaks. \n")
     writeMessage("We are using " + str(len(random_background_seqs_list)) + " random sequences\n")
 
@@ -142,6 +146,15 @@ def main():
     #returnMotifsWithLowestPval(known_motifs, 4)
     sysMessage("DONE >:[ \n\n")
     out_file.close()
+
+def determineIfNeedCHR(genome_path):
+    """
+    returns True if you need to add "chr" to the chromosome name 
+    """
+    file = open(genome_path + ".fai")
+    if str.isdigit(file.readline().split("\t")[0]):
+        return False
+    return True
 
 def generateRandomSeqsFromChr(chr, num, length):
     """
@@ -214,7 +227,7 @@ def getSeqFromGenome(chromosome, start, end):
     """
     
     #genes = Fasta(genome)
-    chromosome = str(chromosome).removeprefix("chr")
+    #chromosome = str(chromosome).removeprefix("chr")
     if chromosome in genome: # if chromosome is in the same format as the indexing
         return str(genome[chromosome][start:end])
     elif ("chr"+str(chromosome)) in genome: # if you need to add "chr" to the chromosome number to get it to match
@@ -247,7 +260,7 @@ def getPeaksFromBed(bed_path):
     file.close()
     return peaks
 
-def getListOfPeakSeqFromBed(bed_path):
+def getListOfPeakSeqFromBed(bed_path, need_chr = True):
     """
     Returns a list of all the peak sequences
     Calls getPeaksFromBed
@@ -264,10 +277,21 @@ def getListOfPeakSeqFromBed(bed_path):
     peak_list = []
     random_list = []
     ent_list = getPeaksFromBed(bed_path)
+    has_chr = "chr" in ent_list[0][0]
     print("There are " + str(len(ent_list)) + " peaks")
     for ent in ent_list:
-        temp_seq = getSeqFromGenome(ent[0], int(ent[1]), int(ent[2]))
-        temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])-int(ent[1]))
+        if need_chr and has_chr: # can go ahead and access easily
+            temp_seq = getSeqFromGenome(ent[0], int(ent[1]), int(ent[2]))
+            temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])-int(ent[1]))
+        elif need_chr and not has_chr: # needs chr but doesnt have chr already, must add chr
+            temp_seq = getSeqFromGenome("chr"+ent[0], int(ent[1]), int(ent[2]))
+            temp_rand = getRandomBackgroundSeq("chr"+ent[0], int(ent[2])-int(ent[1]))
+        elif not need_chr and has_chr: # doesnt need chr but has chr, must remove chr
+            temp_seq = getSeqFromGenome(ent[0][3:], int(ent[1]), int(ent[2]))
+            temp_rand = getRandomBackgroundSeq(ent[0][3:], int(ent[2])-int(ent[1]))
+        else: # doesnt need and doesnt have
+            temp_seq = getSeqFromGenome(ent[0], int(ent[1]), int(ent[2]))
+            temp_rand = getRandomBackgroundSeq(ent[0], int(ent[2])-int(ent[1]))
         if temp_seq != None: # will be None if the chromosome isnt available
             peak_list.append(str(temp_seq)) # add the string of the sequence
             random_list.append(str(temp_rand))
