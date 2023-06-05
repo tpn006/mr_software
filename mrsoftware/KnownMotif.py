@@ -21,7 +21,18 @@ class KnownMotif:
         self.score_arr = []
         self.rnd_scr_arr = []
 
-    def quickScore(self, sequence):
+    def bestScore(self, sequence):
+        """
+        Score a sequence
+        Parameters:
+        -----------
+        sequence: The sequence to score against
+        Returns:
+        --------
+        float: The best score calculated with a shifting 
+                frame and reverse complements
+
+        """
         if sequence == None: # IF we get bad input :(
             return
         scores = []
@@ -66,7 +77,7 @@ class KnownMotif:
         print("Evaluating " + str(self.name))
         back_scores = []
         for seq in back_seqs:
-            back_scores.append(self.quickScore(seq))
+            back_scores.append(self.bestScore(seq))
         back_scores.sort()
         num_expected_to_fail_at_pval = int(len(back_scores)*(1-p_val))
         num_expected_to_pass_at_pval = int(len(back_scores)*(p_val))
@@ -82,8 +93,8 @@ class KnownMotif:
             # find the max of the forward and reverse
             if seq == None:
                 continue
-            fw_score = self.quickScore(seq)
-            bw_score = self.quickScore(self.ReverseComplement(seq))
+            fw_score = self.bestScore(seq)
+            bw_score = self.bestScore(self.ReverseComplement(seq))
             if fw_score == None:
                 print(seq + "has none type fw")
                 continue

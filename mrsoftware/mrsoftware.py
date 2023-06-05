@@ -159,6 +159,16 @@ def determineIfNeedCHR(genome_path):
 def generateRandomSeqsFromChr(chr, num, length):
     """
     Get <num> random sequences from chromosome <chr>
+    
+    Parameters:
+    -----------
+        chr: Chromosome to get the sequence from
+        num: How many to get
+        length:
+    
+    Returns:
+    --------
+        backgroundSeqs:
     """
     backgroundSeqs = []
     for i in range(num):
@@ -379,7 +389,7 @@ def getRandomBackgroundSeq(chr, length):
 
     Returns:
     --------
-        the sequence
+        str: the sequence of nucleotides
     """
     length_of_chromosome = -1
     if chr in genome: # if chromosome is in the same format as the indexing
