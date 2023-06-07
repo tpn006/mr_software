@@ -6,7 +6,7 @@ This is the final project for group 18 for CSE 185 Spring 2023. The goal of the 
 
 # Install instructions
 
-Our tool can be ran as either a python3 program or a unix command line tool.
+Our tool can be ran as a unix command line tool.
 
 ### Required Dependencies
 Either way, there are a two required dependencies. Running our tool requires the `pyfaidx` and `scipy` libraries to be installed. You can install those libraries using `pip`:
@@ -15,13 +15,16 @@ Either way, there are a two required dependencies. Running our tool requires the
 pip install scipy
 pip install pyfaidx 
 ```
-You can now run the tool as a python program (more details in Basic Usage section)
 
 ### Installing tool
 Another option is to install `mrsoftware`. This is done by using `setuptools`. 
 You can verify if `setuptools` is installed correctly by using `pip show setuptools`. If `setuptools` is not installed, you can install `setuptools` through `sudo apt-get install python3-setuptools` for python3. You can check if the package is installed properly by running `dpkg-query -l python3-setuptools`; if the package is installed properly, you will see information about the package installation, if not installed you will see a "no packages found" message.
 
-Using Setuptools allows you to install the tool using the command `python3 setup.py install` followed by `chmod +x mrsoftware`. You can now check for installation by running `mrsoftware --help`. Congratualtions, you have now installed `mrsoftware`. 
+Using Setuptools allows you to install the tool using the command `python3 mr_software/setup.py install` followed by `chmod +x mrsoftware`. You can now check for installation by running `mrsoftware --help`. Congratualtions, you have now installed `mrsoftware`. 
+
+#### Troubleshooting Installation
+* You may have to add the installation directory to the path (or install to a directory on the path) using `--install-dir` option in `easy_install` (such as `easy_install . --install-dir /usr/bin`). 
+* On DataHub, you may not have write permissions, so run `python3 setup.py install --user` then look for the directory where the tool got installed to. In my case, it was `/home/{me}/.local/bin`, so now I can run `/home/{me}/.local/bin/mrsoftware` to use our tool.
 
 # Basic usage
 
@@ -40,11 +43,7 @@ Using Setuptools allows you to install the tool using the command `python3 setup
 
 The output file format is a `.txt` with the name of the motif and the p-value for enrichment.
 
-The basic usage of `mrsoftware` using `python3` is:
-```shell
-python3 mrsoftware.py -m < .meme file > -g < .fa file > < .bed file > -o < output file >
-```
-or if `mrsoftware` is installed, you can run:
+The basic usage of `mrsoftware` is:
 ```shell
 mrsoftware -m < .meme file > -g < .fa file > < .bed file > -o < output file >
 ``` 
@@ -55,12 +54,7 @@ To run `mrsoftware` on a small test example (using files in this repository):
 * download the [GRCm38.fa reference genome](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001635.20/) (this file is very large ~2.6GB)
 * copy GRCm38.fa to /MR_SOFTWARE/tests/
 * run: 
-* Go to `/MR_SOFTWARE/` directory
-Python:
-```shell
-python3 ./mrsoftware/mrsoftware.py -m ./tests/short.meme -g ./tests/GRCm38.fa ./tests/short.bed -o outfile.txt
-```
-or Unix:
+* Go to `/mr_software/` directory
 ```shell
 mrsoftware -m ./tests/short.meme -g ./tests/GRCm38.fa ./tests/short.bed -o outfile.txt
 ```
@@ -78,9 +72,9 @@ MOTIF: BACH2_MOUSE.H11MO.0.A	p-value:0.12041306253096071
 MOTIF: BARX1_MOUSE.H11MO.0.C	p-value:0.12041306253096071
 MOTIF: ARI5B_MOUSE.H11MO.0.C	p-value:0.4969325153374233
 MOTIF: BACH1_MOUSE.H11MO.0.C	p-value:0.4969325153374233
-MOTIF: AHR_MOUSE.H11MO.0.B	p-value:1.0
-MOTIF: AIRE_MOUSE.H11MO.0.C	p-value:1.0
-MOTIF: ALX1_MOUSE.H11MO.0.B	p-value:1.0
+MOTIF: AHR_MOUSE.H11MO.0.B  p-value:1.0
+MOTIF: AIRE_MOUSE.H11MO.0.C p-value:1.0
+MOTIF: ALX1_MOUSE.H11MO.0.B p-value:1.0
 MOTIF: ANDR_MOUSE.H11MO.0.A	p-value:1.0
 MOTIF: ARNT_MOUSE.H11MO.0.B	p-value:1.0
 MOTIF: ASCL1_MOUSE.H11MO.0.A	p-value:1.0
