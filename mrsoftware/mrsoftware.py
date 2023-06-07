@@ -6,7 +6,6 @@ from . import KnownMotif
 import os
 from pyfaidx import Fasta
 import sys
-import numpy as np
 import math
 import argparse
 import random
@@ -144,7 +143,7 @@ def main():
     for motif in known_motifs:
         writeMessage(str(motif) + "\n", output_file=out_file)
     #returnMotifsWithLowestPval(known_motifs, 4)
-    sysMessage("DONE >:[ \n\n")
+    sysMessage("DONE :] \n\n")
     out_file.close()
 
 def determineIfNeedCHR(genome_path):

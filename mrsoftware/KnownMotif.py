@@ -74,7 +74,7 @@ class KnownMotif:
         """
         
         # Get the threshold score by scoring all background sequences
-        print("Evaluating " + str(self.name))
+        print("Evaluating " + str(self.name), end=" ")
         back_scores = []
         for seq in back_seqs:
             back_scores.append(self.bestScore(seq))
@@ -114,7 +114,7 @@ class KnownMotif:
         # print("Our fisher exact table for " + self.name+ " shows: " + str(table))
         odds, pval = scipy.stats.fisher_exact(table)
         self.pval = pval 
-        print("Done evaluating " + self.name + " resulting pval is " + str(self.pval))
+        print("Done evaluating")
 
     def ReverseComplement(self, sequence):
         """
