@@ -1,3 +1,7 @@
 *.fai
 GRCm38.fa
 /results/*
+/mrsoftware.egg-info/*
+/dist/*
+/build/*
+/mrsoftware/__pycache__/*

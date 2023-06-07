@@ -168,4 +168,4 @@ class KnownMotif:
         
     # To String method    
     def __str__(self):
-        return "MOTIF: " + self.name + " p-value:" + str(self.pval)
+        return "MOTIF: " + self.name +"\tp-value:" + str(self.pval)

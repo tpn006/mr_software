@@ -1,8 +1,8 @@
 #!/usr/bin/ python3
 #TODO EVERYTIME THERE ARE ACTUAL CHANGES, RERUN THE INSTALL COMMAND TO MAKE IT ACTUALLY WORK AS A UNIX COMMAND. ALSO CHANGE THE IMPORT TO "from . "
 import argparse
-#from . import KnownMotif
-import KnownMotif
+from . import KnownMotif
+#import KnownMotif
 import os
 from pyfaidx import Fasta
 import sys
